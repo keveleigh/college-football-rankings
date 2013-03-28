@@ -4,8 +4,7 @@
 This scrapes college football team information from
 ESPN. It uses BeautifulSoup Alpha 4 and xlwt.
 
-In order to use this, you will need to download bs4 and also lxml (bs4 is
-modular and can use both lxml and html5lib as back-end parsers).
+In order to use this, you will need to download bs4, lxml, and xlwt.
 
 Dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, [Opponent1, Outcome1, Opponent1W, Opponent1L], [Opponent2, Outcome2, Opponent2W, Opponent2L], ... , [OpponentN, OutcomeN, OpponentNW, OpponentNL]]}
 
@@ -116,6 +115,8 @@ def scrape_links(school, espn_schedule):
             oppName = 'North Dakota State';
         if oppName == 'SDSU':
             oppName = 'South Dakota State';
+        if oppName == 'TX A&amp;M-Commerce':
+            oppName = 'Texas A&M-Commerce';
         if oppName[:6] == 'Miss. ':
             oppName = 'Mississippi ' + oppName[6:];
         if oppName[-2:] == 'k.':
@@ -159,6 +160,8 @@ def main():
     items = allSchools.items()
     items.sort()
     ws1 = wb.add_sheet('FBS Main Page');
+    ws1Col = 0;
+    ws1Row = 0;
 
     for key, value in items:
         if value[1] == 'FBS':
@@ -174,10 +177,17 @@ def main():
         if value[1] == 'FBS':
             longestOpp = 0;
             ws = wb.get_sheet(j);
-            ws.write(0, 0, key);
+            ws.write(0, 0, xlwt.Formula('HYPERLINK("#' + "'FBS Main Page'" + '!A1";"' + key + '")'));
             ws.write(1, 0, value[1]);
             ws.write(2, 0, value[2] + '-' + value[3]);
             ws.write(3, 0, xlwt.Formula(str(value[2]) + '/(' + str(value[2]) + '+' + str(value[3]) + ')'));
+            ws1.write(ws1Row, ws1Col, xlwt.Formula("'" + key + "'!A6"));
+            ws1.write(ws1Row, ws1Col+1, xlwt.Formula('HYPERLINK("#' + "'" + key + "'" + '!A1";"' + key + '")'));
+            #if ws1Row == 19:
+            #    ws1Row = 0;
+            #    ws1Col+=3;
+            #else:
+            ws1Row+=1;
             i = 1;
             for team in value[4:]:
                 teamName = team[0];
@@ -187,15 +197,19 @@ def main():
                     teamOutc = '';
                 if len(teamName) > longestOpp:
                     longestOpp = len(teamName);
-                ws.write(i, 1, xlwt.Formula('HYPERLINK("#' + "'" + teamName + "'" + '!A1";"' + teamName + '")'));
-                ws.write(i, 2, teamOutc);
-                if(teamName == 'TX A&amp;M-Commerce'):
+                if(teamName == 'Texas A&M-Commerce'):
+                    ws.write(i, 1, 'Texas A&M-Commerce');                    
+                    ws.write(i, 2, teamOutc);
                     ws.write(i, 3, int(1));
                     ws.write(i, 4, int(9));
                 elif teamName == 'Northwestern Oklahoma State':
+                    ws.write(i, 1, 'Northwestern Oklahoma State');
+                    ws.write(i, 2, teamOutc);
                     ws.write(i, 3, int(4));
                     ws.write(i, 4, int(7));
                 else:
+                    ws.write(i, 1, xlwt.Formula('HYPERLINK("#' + "'" + teamName + "'" + '!A1";"' + teamName + '")'));
+                    ws.write(i, 2, teamOutc);
                     if teamOutc != '':
                         if teamOutc == 'W':
                             offset = 0;
@@ -203,7 +217,7 @@ def main():
                             offset = 1;
                         ws.write(i, 3, int(allSchools[teamName][2])-offset);
                         ws.write(i, 4, int(allSchools[teamName][3])-(1-offset));
-                try:
+                try: #For non-DII/III Schools
                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
                 except:
                     print teamName;
@@ -221,7 +235,7 @@ def main():
         if value[1] == 'FCS':
             longestOpp = 0;
             ws = wb.get_sheet(j);
-            ws.write(0, 0, key);
+            ws.write(0, 0, xlwt.Formula('HYPERLINK("#' + "'FCS Main Page'" + '!A1";"' + key + '")'));
             ws.write(1, 0, value[1]);
             ws.write(2, 0, value[2] + '-' + value[3]);
             if(value[3] == '0'):
