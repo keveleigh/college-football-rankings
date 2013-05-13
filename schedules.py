@@ -18,6 +18,7 @@ from urlparse import urlparse
 from bs4 import BeautifulSoup as bs
 
 allSchools = {};
+allIDs = {};
 
 def _format_schedule_url(year, idNum):
     """Format ESPN link to scrape individual records from."""
@@ -47,80 +48,13 @@ def scrape_links(school, espn_schedule):
     i = 4;
     for opp in opponents:
         tempName = re.split('[><]', opp.encode('ascii'));
-        oppName = tempName[4];
-        oppName = re.sub('&amp;', '&', oppName, flags=re.IGNORECASE)
-        if oppName == '':
-            oppName = tempName[2];
-        if oppName[:3] == 'NC ':
-            oppName = 'North Carolina ' + oppName[3:];
-        if oppName[-3:] == ' St':
-            oppName = oppName[:-3] + ' State';
-        if oppName[:5] == 'N Car':
-            oppName = 'North ' + oppName[2:];
-        if oppName[:5] == 'S Car':
-            oppName = 'South ' + oppName[2:];
-        if oppName[:2] == 'N ':
-            oppName = 'Northern ' + oppName[2:];
-        if oppName[:2] == 'E ':
-            oppName = 'Eastern ' + oppName[2:];
-        if oppName[:2] == 'S ':
-            oppName = 'Southern ' + oppName[2:];
-        if oppName[:2] == 'W ':
-            oppName = 'Western ' + oppName[2:];
-        if oppName[:4] == 'Mid ':
-            oppName = 'Middle ' + oppName[4:];
-        if oppName[-2:] == ' U':
-            oppName = oppName[:-2] + ' University';
-        if oppName[:5] == 'Cent ':
-            oppName = 'Central ' + oppName[5:];
-        if oppName[-5:] == ' Cent':
-            oppName = oppName[:-5] + ' Central';
-        if oppName[-6:] == ' South':
-            oppName = oppName[:-6] + ' Southern';
-        if oppName[:3] == 'LA-':
-            oppName = 'Louisiana-' + oppName[3:];
-        if oppName[:3] == 'AR-':
-            oppName = 'Arkansas-' + oppName[3:];
-        if oppName[:6] == 'SE Mis':
-            oppName = 'Southeast ' + oppName[3:];
-        if oppName[:3] == 'SE ':
-            oppName = 'Southeastern ' + oppName[3:];
-        if oppName[:3] == 'SF ':
-            oppName = 'Stephen F. ' + oppName[3:];
-        if oppName[:3] == 'NW ':
-            oppName = 'Northwestern ' + oppName[3:];
-        if oppName[:3] == 'ND ':
-            oppName = 'North Dakota ' + oppName[3:];
-        if oppName[:3] == 'SD ':
-            oppName = 'South Dakota ' + oppName[3:];
-        if oppName[:5] == 'Tenn-':
-           oppName = 'Tennessee-' + oppName[5:];
-        if oppName[:6] == 'Coast ':
-           oppName = 'Coastal ' + oppName[6:];
-        if oppName[-4:] == ' Int':
-            oppName = oppName[:-4] + ' International';
-        if oppName[-4:] == ' Atl':
-            oppName = oppName[:-4] + ' Atlantic';
-        if oppName == 'VMI':
-            oppName = 'Virginia Military Institute';
-        if oppName == 'Southern':
-            oppName = 'Southern University';
-        if oppName == 'SMU':
-            oppName = 'Southern Methodist';
-        if oppName == 'CSU':
-            oppName = 'Charleston Southern';
-        if oppName == 'BYU':
-            oppName = 'Brigham Young';
-        if oppName == 'NDSU':
-            oppName = 'North Dakota State';
-        if oppName == 'SDSU':
-            oppName = 'South Dakota State';
-        if oppName == 'TX A&amp;M-Commerce':
-            oppName = 'Texas A&M-Commerce';
-        if oppName[:6] == 'Miss. ':
-            oppName = 'Mississippi ' + oppName[6:];
-        if oppName[-2:] == 'k.':
-            oppName = oppName[:-2] + 'kman';
+        oppID = re.split('[/]', tempName[3]);
+        if len(oppID) >= 8:
+            oppID = oppID[7]
+            oppName = allIDs[oppID]
+        else:
+            oppName = tempName[2]
+            oppName = re.sub('&amp;', '&', oppName, flags=re.IGNORECASE)
         allSchools[school].append([oppName]);
     outcomes = soup.find_all("ul", re.compile('game-schedule'));
     for oc in outcomes:
@@ -133,23 +67,31 @@ def scrape_links(school, espn_schedule):
 
 def get_schools():
     global allSchools;
+    global allIDs;
     url = urllib2.urlopen('http://espn.go.com/college-football/teams');
     print url.geturl();
     soup = bs(url.read(), ['fast', 'lxml']);
     #divisions = soup.
     school_links = soup.find_all(href=re.compile("football/team/_/"));
     for school in school_links[0:124]:
-        lenId = len(unicode(school)) - 50;
-        lenId = lenId + 27;
-        allSchools[school.string.encode('ascii')] = [(school['href'].split('/')[7]),'FBS'];
+        lenId = len(unicode(school)) - 50
+        lenId = lenId + 27
+        schID = (school['href'].split('/')[7])
+        school = school.string.encode('ascii')
+        allSchools[school] = [schID,'FBS']
+        allIDs[schID] = school
     for school in school_links[124:]:
-        lenId = len(unicode(school)) - 50;
-        lenId = lenId + 27;
-        allSchools[school.string.encode('ascii')] = [(school['href'].split('/')[7]),'FCS'];
+        lenId = len(unicode(school)) - 50
+        lenId = lenId + 27
+        schID = (school['href'].split('/')[7])
+        school = school.string.encode('ascii')
+        allSchools[school] = [schID,'FCS']
+        allIDs[schID] = school
 
 def main():
     get_schools();
-    year = datetime.date.today().year;
+    #year = datetime.date.today().year;
+    year = 2012
     for school in allSchools:
         print school;
         scrape_links(school, _format_schedule_url(year, allSchools[school][0]));
@@ -195,15 +137,15 @@ def main():
                     teamOutc = team[1];
                 else:
                     teamOutc = '';
-                if len(teamName) > longestOpp:
-                    longestOpp = len(teamName);
-                if(teamName == 'Texas A&M-Commerce'):
-                    ws.write(i, 1, 'Texas A&M-Commerce');                    
+                if(teamName == 'TX A&M-Commerce'):
+                    teamName = 'Texas A&M-Commerce'
+                    ws.write(i, 1, teamName);                    
                     ws.write(i, 2, teamOutc);
                     ws.write(i, 3, int(1));
                     ws.write(i, 4, int(9));
-                elif teamName == 'Northwestern Oklahoma State':
-                    ws.write(i, 1, 'Northwestern Oklahoma State');
+                elif teamName == 'NW Oklahoma St':
+                    teamName = 'Northwestern Oklahoma State'
+                    ws.write(i, 1, teamName);
                     ws.write(i, 2, teamOutc);
                     ws.write(i, 3, int(4));
                     ws.write(i, 4, int(7));
@@ -221,6 +163,8 @@ def main():
                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
                 except:
                     print teamName;
+                if len(teamName) > longestOpp:
+                    longestOpp = len(teamName);
                 i+=1;
             ws.write(i+1, 3, xlwt.Formula('SUM(D2:D' + str(i) + ')'));
             ws.write(i+1, 4, xlwt.Formula('SUM(E2:E' + str(i) + ')'));
