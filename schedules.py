@@ -192,8 +192,9 @@ def main(argv):
                         offset = 1;
                     ws.write(i, 3, teamWin-offset);
                     ws.write(i, 4, teamLoss-(1-offset));
-                    oppWins = oppWins + teamWin-offset
-                    oppLoss = oppLoss + teamLoss-(1-offset)
+                    if teamName in allSchools and allSchools[teamName][1] == 'FBS':
+                        oppWins = oppWins + teamWin-offset
+                        oppLoss = oppLoss + teamLoss-(1-offset)
                 try: #For non-DII/III Schools
                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
                 except:
