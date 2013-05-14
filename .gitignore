@@ -34,5 +34,6 @@ nosetests.xml
 .project
 .pydevproject
 
-# Generated Excel Spreadsheet
+# Generated files
 *.xls
+*.txt

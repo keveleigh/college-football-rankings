@@ -6,9 +6,9 @@ ESPN. It uses BeautifulSoup Alpha 4 and xlwt.
 
 In order to use this, you will need to download bs4, lxml, and xlwt.
 
-Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, [Opponent1, Outcome1, Opponent1W, Opponent1L], [Opponent2, Outcome2, Opponent2W, Opponent2L], ... , [OpponentN, OutcomeN, OpponentNW, OpponentNL]]}
+Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
 ID dictionary format: {ESPN ID: Team Name}
-Ranks dictionary format: {Rank Stat: Team Name}
+Ranks dictionary format: {Team Name: Rank Stat}
 """
 
 import urllib2
@@ -16,6 +16,9 @@ import re
 import datetime
 import xlwt
 import operator
+import sys
+import ast
+import os
 from urlparse import urlparse
 from bs4 import BeautifulSoup as bs
 
@@ -88,13 +91,27 @@ def get_schools():
         allSchools[school] = [schID,'FCS']
         allIDs[schID] = school
 
-def main():
-    get_schools();
+def main(argv):
+    global allSchools
     #year = datetime.date.today().year;
-    year = 2012
-    for school in allSchools:
-        print school;
-        scrape_links(school, _format_schedule_url(year, allSchools[school][0]));
+    if len(argv) < 2:
+        year = str(2012)
+    else:
+        year = argv[1]
+    if len(argv) > 0 and argv[0] == 'reuse' and os.path.isfile('teams'+str(year)+'.txt'):
+        f = open('teams'+str(year)+'.txt', 'r')
+        allSchools = ast.literal_eval(f.read())
+        for key in allSchools:
+            print key
+    else:
+        get_schools()
+        for school in allSchools:
+            print school
+            scrape_links(school, _format_schedule_url(year, allSchools[school][0]))
+        f = open('teams'+str(year)+'.txt', 'w')
+        f.write(str(allSchools))
+        f.close()
+
     j = 1;
     wb = xlwt.Workbook()
     items = allSchools.items()
@@ -128,41 +145,59 @@ def main():
             oppLoss = 0
             for team in value[4:]:
                 teamName = team[0];
+                teamWin = 0
+                teamLoss = 0
                 if len(team) > 1:
                     teamOutc = team[1];
                 else:
                     teamOutc = '';
-                if(teamName == 'TX A&M-Commerce'):
+                if(teamName == 'TX A&M-Commerce') and year == '2012':
                     teamName = 'Texas A&M-Commerce'
                     ws.write(i, 1, teamName);
-                    ws.write(i, 2, teamOutc);
-                    ws.write(i, 3, int(1));
-                    ws.write(i, 4, int(9));
-                    oppWins = oppWins + 1
-                    oppLoss = oppLoss + 9
-                elif teamName == 'NW Oklahoma St':
+                    teamWin = 1
+                    teamLoss = 9
+                elif teamName == 'NW Oklahoma St' and year == '2012':
                     teamName = 'Northwestern Oklahoma State'
                     ws.write(i, 1, teamName);
-                    ws.write(i, 2, teamOutc);
-                    ws.write(i, 3, int(4));
-                    ws.write(i, 4, int(7));
-                    oppWins = oppWins + 4
-                    oppLoss = oppLoss + 7
+                    teamWin = 4
+                    teamLoss = 7
+                elif(teamName == 'West Alabama') and year == '2011':
+                    ws.write(i, 1, teamName);
+                    teamWin = 8
+                    teamLoss = 4
+                elif teamName == 'Henderson St' and year == '2011':
+                    teamName = 'Henderson State'
+                    ws.write(i, 1, teamName);
+                    teamWin = 6
+                    teamLoss = 4
+                elif teamName == 'Tarleton St' and year == '2011':
+                    teamName = 'Tarleton State'
+                    ws.write(i, 1, teamName);
+                    teamWin = 6
+                    teamLoss = 5
+                elif teamName == 'NE St' and year == '2011':
+                    teamName = 'Northeastern State'
+                    ws.write(i, 1, teamName);
+                    teamWin = 7
+                    teamLoss = 5
                 else:
                     ws.write(i, 1, xlwt.Formula('HYPERLINK("#' + "'" + teamName + "'" + '!A1";"' + teamName + '")'));
-                    ws.write(i, 2, teamOutc);
-                    if teamOutc != '':
-                        if teamOutc == 'W':
-                            offset = 0;
-                        else:
-                            offset = 1;
-                        ws.write(i, 3, int(allSchools[teamName][2])-offset);
-                        ws.write(i, 4, int(allSchools[teamName][3])-(1-offset));
-                        oppWins = oppWins + int(allSchools[teamName][2])-offset
-                        oppLoss = oppLoss + int(allSchools[teamName][3])-(1-offset)
+                    teamWin = int(allSchools[teamName][2])
+                    teamLoss = int(allSchools[teamName][3])
+                ws.write(i, 2, teamOutc);
+                if teamOutc != '':
+                    if teamOutc == 'W':
+                        offset = 0;
+                    else:
+                        offset = 1;
+                    ws.write(i, 3, teamWin-offset);
+                    ws.write(i, 4, teamLoss-(1-offset));
+                    oppWins = oppWins + teamWin-offset
+                    oppLoss = oppLoss + teamLoss-(1-offset)
                 try: #For non-DII/III Schools
                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
                 except:
+                    ws.write(i, 5, 0)
                     print teamName;
                 if len(teamName) > longestOpp:
                     longestOpp = len(teamName);
@@ -207,7 +242,6 @@ def main():
 
     sortedRanks = sorted(allRanks.items(), key=operator.itemgetter(1), reverse=True)
     for rank in sortedRanks:
-        print rank
         ws1.write(ws1Row, ws1Col, rank[1]);
         ws1.write(ws1Row, ws1Col+1, xlwt.Formula('HYPERLINK("#' + "'" + rank[0] + "'" + '!A1";"' + rank[0] + '")'));
         #if ws1Row == 19:
@@ -215,10 +249,10 @@ def main():
         #    ws1Col+=3;
         #else:
         ws1Row+=1;
-    wb.save('AllTeams.xls');
+    wb.save('AllTeams'+str(year)+'.xls');
 
 if __name__ == '__main__':
     import time
     start = time.time()
-    main()
+    main(sys.argv[1:])
     print time.time() - start, 'seconds'
