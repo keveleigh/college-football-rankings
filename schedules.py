@@ -195,6 +195,8 @@ def main(argv):
                     if teamName in allSchools and allSchools[teamName][1] == 'FBS':
                         oppWins = oppWins + teamWin-offset
                         oppLoss = oppLoss + teamLoss-(1-offset)
+                    elif teamOutc == 'L':
+                        oppLoss = oppLoss + 12
                 try: #For non-DII/III Schools
                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
                 except:
@@ -242,8 +244,9 @@ def main(argv):
             j+=1;
 
     sortedRanks = sorted(allRanks.items(), key=operator.itemgetter(1), reverse=True)
+    highestRank = sortedRanks[0][1]
     for rank in sortedRanks:
-        ws1.write(ws1Row, ws1Col, rank[1]);
+        ws1.write(ws1Row, ws1Col, rank[1]/highestRank);
         ws1.write(ws1Row, ws1Col+1, xlwt.Formula('HYPERLINK("#' + "'" + rank[0] + "'" + '!A1";"' + rank[0] + '")'));
         #if ws1Row == 19:
         #    ws1Row = 0;
