@@ -2,11 +2,11 @@
 
 """
 This scrapes college football team information from
-ESPN. It uses BeautifulSoup Alpha 4 and xlwt.
+ESPN. It uses BeautifulSoup 4 and xlwt.
 
 In order to use this, you will need to download bs4, lxml, and xlwt.
 
-Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
+Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1, Opponent2, ... , OpponentN}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
 ID dictionary format: {ESPN ID: Team Name}
 Ranks dictionary format: {Team Name: Rank Stat}
 """
@@ -19,7 +19,6 @@ import operator
 import sys
 import ast
 import os
-from urlparse import urlparse
 from bs4 import BeautifulSoup as bs
 
 allSchools = {}
@@ -47,7 +46,9 @@ def scrape_links(school, espn_schedule):
     allSchools[school].append(record[1]);
 
     opponents = soup.find_all("li", "team-name");
-    i = 4;
+    outcomes = soup.find_all("ul", re.compile('game-schedule'));
+    allSchools[school].append(set());
+    i = 5;
     for opp in opponents:
         tempName = re.split('[><]', opp.encode('ascii'));
         oppID = re.split('[/]', tempName[3]);
@@ -57,12 +58,11 @@ def scrape_links(school, espn_schedule):
         else:
             oppName = tempName[2]
             oppName = re.sub('&amp;', '&', oppName, flags=re.IGNORECASE)
-        allSchools[school].append([oppName]);
-    outcomes = soup.find_all("ul", re.compile('game-schedule'));
-    for oc in outcomes:
-        temp = re.split('[><]', oc.encode('ascii'));
+        allSchools[school].append(oppName);
+        temp = re.split('[><]', outcomes[i].encode('ascii'));
         if temp[6] == 'W' or temp[6] == 'L':
             allSchools[school][i].append(temp[6]);
+            allSchools[school][4].add(oppName);
             i+=1;
         elif temp[4] == 'Postponed':
             del allSchools[school][i];
@@ -93,7 +93,7 @@ def get_schools():
 
 def main(argv):
     global allSchools
-    #year = datetime.date.today().year;
+    year = datetime.date.today().year;
     if len(argv) < 2:
         year = str(2012)
     else:
@@ -143,7 +143,7 @@ def main(argv):
             i = 1;
             oppWins = 0
             oppLoss = 0
-            for team in value[4:]:
+            for team in value[5:]:
                 teamName = team[0];
                 teamWin = 0
                 teamLoss = 0
@@ -228,7 +228,7 @@ def main(argv):
             else:
                 ws.write(3, 0, float(value[2])/(float(value[2])+float(value[3])));
             i = 1;
-            for team in value[4:]:
+            for team in value[5:]:
                 teamName = team[0];
                 if len(team) > 1:
                     teamOutc = team[1];
