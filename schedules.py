@@ -49,7 +49,7 @@ def scrape_links(school, espn_schedule):
 
     opponents = soup.find_all("li", "team-name");
     outcomes = soup.find_all("ul", re.compile('game-schedule'));
-    allSchools[school].append(set());
+    allSchools[school].append([]);
     i = 5;
     j = 1;
     for opp in opponents:
@@ -66,7 +66,7 @@ def scrape_links(school, espn_schedule):
             temp = re.split('[><]', outcomes[j].encode('ascii'));
             if temp[6] == 'W' or temp[6] == 'L':
                 allSchools[school][i].append(temp[6]);
-                allSchools[school][4].add(oppName);
+                allSchools[school][4].append(oppName);
                 i+=1;
                 j+=2;
             elif temp[4] == 'Postponed':
