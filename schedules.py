@@ -9,6 +9,8 @@ In order to use this, you will need to download bs4, lxml, and xlwt.
 Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1, Opponent2, ... , OpponentN}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
 ID dictionary format: {ESPN ID: Team Name}
 Ranks dictionary format: {Team Name: Rank Stat}
+
+Command format: python schedules.py [reuse] [year]
 """
 
 import urllib2
@@ -49,6 +51,7 @@ def scrape_links(school, espn_schedule):
     outcomes = soup.find_all("ul", re.compile('game-schedule'));
     allSchools[school].append(set());
     i = 5;
+    j = 1;
     for opp in opponents:
         tempName = re.split('[><]', opp.encode('ascii'));
         oppID = re.split('[/]', tempName[3]);
@@ -58,14 +61,17 @@ def scrape_links(school, espn_schedule):
         else:
             oppName = tempName[2]
             oppName = re.sub('&amp;', '&', oppName, flags=re.IGNORECASE)
-        allSchools[school].append(oppName);
-        temp = re.split('[><]', outcomes[i].encode('ascii'));
-        if temp[6] == 'W' or temp[6] == 'L':
-            allSchools[school][i].append(temp[6]);
-            allSchools[school][4].add(oppName);
-            i+=1;
-        elif temp[4] == 'Postponed':
-            del allSchools[school][i];
+        allSchools[school].append([oppName]);
+        if(j < len(outcomes)):
+            temp = re.split('[><]', outcomes[j].encode('ascii'));
+            if temp[6] == 'W' or temp[6] == 'L':
+                allSchools[school][i].append(temp[6]);
+                allSchools[school][4].add(oppName);
+                i+=1;
+                j+=2;
+            elif temp[4] == 'Postponed':
+                del allSchools[school][i];
+                j+=2;
 
 def get_schools():
     global allSchools
@@ -76,14 +82,14 @@ def get_schools():
     soup = bs(url.read(), ['fast', 'lxml']);
     #divisions = soup.
     school_links = soup.find_all(href=re.compile("football/team/_/"));
-    for school in school_links[0:124]:
+    for school in school_links[0:126]:
         lenId = len(unicode(school)) - 50
         lenId = lenId + 27
         schID = (school['href'].split('/')[7])
         school = school.string.encode('ascii')
         allSchools[school] = [schID,'FBS']
         allIDs[schID] = school
-    for school in school_links[124:]:
+    for school in school_links[126:]:
         lenId = len(unicode(school)) - 50
         lenId = lenId + 27
         schID = (school['href'].split('/')[7])
