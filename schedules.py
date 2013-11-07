@@ -49,7 +49,7 @@ def scrape_links(school, espn_schedule):
 
     opponents = soup.find_all("li", "team-name");
     outcomes = soup.find_all("ul", re.compile('game-schedule'));
-    allSchools[school].append([]);
+    allSchools[school].append({});
     i = 5;
     j = 1;
     for opp in opponents:
@@ -66,12 +66,51 @@ def scrape_links(school, espn_schedule):
             temp = re.split('[><]', outcomes[j].encode('ascii'));
             if temp[6] == 'W' or temp[6] == 'L':
                 allSchools[school][i].append(temp[6]);
-                allSchools[school][4].append(oppName);
+                allSchools[school][4][oppName] = temp[6]; # Will cause issues when team is played twice
                 i+=1;
                 j+=2;
             elif temp[4] == 'Postponed':
                 del allSchools[school][i];
                 j+=2;
+
+def calculate_score(school1):
+    global allSchools;
+
+def calculate_op(school1, school2):
+    global allSchools;
+                
+def calculate_oop(school1, school2, school3):
+    global allSchools;
+    
+    school3Info = allSchools[school3];
+    school3Ops = school3Info[4];
+    teamOOP = 0;
+    for school4, result in school3Ops:
+        school4Info = allSchools[school4];
+        school4W = school4Info[2];
+        school4L = school4Info[3];
+        
+        if school2 in school4Info[4]:
+            if school4Info[school2] == 'W':
+                school4W = school4W - 1;
+            else:
+                school4L = school4L - 1;
+            
+        if school1 in school4Info[4]:
+            if school4Info[school1] == 'W':
+                school4W = school4W - 1;
+            else:
+                school4L = school4L - 1;
+            
+        if result == 'W':
+            outcome = 1;
+        else:
+            outcome = 0;
+            
+        school4WinPerc = school4W / (school4W+school4L);   
+        teamOOP = teamOOP + (outcome * school4WinPerc);
+        
+    return teamOOP/len(school3Ops);
 
 def get_schools():
     global allSchools
