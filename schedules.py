@@ -75,42 +75,96 @@ def scrape_links(school, espn_schedule):
 
 def calculate_score(school1):
     global allSchools;
+    
+    school1Info = allSchools[school1];
+    school1Ops = school1Info[4];
+    teamScore = 0;
+    for school2, result in school1Ops.iteritems():
+        if school2 not in allSchools or allSchools[school2][1] != 'FBS':
+            continue;
+        
+        school2OP = calculate_op(school1, school2);
+        
+        if result == 'W':
+            outcome = 1;
+        else:
+            outcome = 0;
+            
+        teamScore = teamScore + (outcome * school2OP);
+    
+    return teamScore;
 
 def calculate_op(school1, school2):
     global allSchools;
-                
-def calculate_oop(school1, school2, school3):
-    global allSchools;
     
-    school3Info = allSchools[school3];
-    school3Ops = school3Info[4];
-    teamOOP = 0;
-    for school4, result in school3Ops:
-        school4Info = allSchools[school4];
-        school4W = school4Info[2];
-        school4L = school4Info[3];
+    school2Info = allSchools[school2];
+    school2Ops = school2Info[4];
+    teamOP = 0;
+    numGames = len(school2Ops);
+    for school3, result in school2Ops.iteritems():
+        if school3 not in allSchools or allSchools[school3][1] != 'FBS':
+            continue;
         
-        if school2 in school4Info[4]:
-            if school4Info[school2] == 'W':
-                school4W = school4W - 1;
-            else:
-                school4L = school4L - 1;
-            
-        if school1 in school4Info[4]:
-            if school4Info[school1] == 'W':
-                school4W = school4W - 1;
-            else:
-                school4L = school4L - 1;
+        if school3 == school1:
+            numGames = numGames - 1;
+            continue;
+        
+        school3OOP = calculate_oop(school1, school2, school3);
             
         if result == 'W':
             outcome = 1;
         else:
             outcome = 0;
             
+        teamOP = teamOP + (outcome * school3OOP);
+        
+    return teamOP/numGames;
+    
+def calculate_oop(school1, school2, school3):
+    global allSchools;
+    
+    school3Info = allSchools[school3];
+    school3Ops = school3Info[4];
+    teamOOP = 0;
+    numGames = len(school3Ops);
+    for school4, result in school3Ops.iteritems():
+        if school4 not in allSchools or allSchools[school4][1] != 'FBS':
+            continue;
+        
+        if school4 == school1:
+            numGames = numGames - 1;
+            continue;
+        if school4 == school2:
+            numGames = numGames - 1;
+            continue;
+                
+        school4Info = allSchools[school4];
+        school4W = int(school4Info[2]);
+        school4L = int(school4Info[3]);
+        
+        if school2 in school4Info[4]:
+            if school4Info[4][school2] == 'W':
+                school4W = school4W - 1;
+            else:
+                school4L = school4L - 1;
+            
+        if school1 in school4Info[4]:
+            if school4Info[4][school1] == 'W':
+                school4W = school4W - 1;
+            else:
+                school4L = school4L - 1;
+            
+        if result == 'W':
+            outcome = 1;
+            school4L = school4L - 1;
+        else:
+            outcome = 0;
+            school4W = school4W - 1;
+            
         school4WinPerc = school4W / (school4W+school4L);   
         teamOOP = teamOOP + (outcome * school4WinPerc);
         
-    return teamOOP/len(school3Ops);
+    return teamOOP/numGames;
 
 def get_schools():
     global allSchools
@@ -257,7 +311,10 @@ def main(argv):
             ws.write(5, 0, teamRec * oppRec);
             ws.col(0).width = len(key)*350;
             ws.col(1).width = longestOpp*300;
-            allRanks[key] = teamRec*oppRec
+            
+            score = teamRec*oppRec;
+#             score = calculate_score(key);
+            allRanks[key] = score;
             j+=1;
 
     j+=1;
