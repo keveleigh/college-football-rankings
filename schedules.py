@@ -91,6 +91,8 @@ def calculate_score(school1):
             outcome = 0;
             
         teamScore = teamScore + (outcome * school2OP);
+        if school1 == 'Georgia Tech':
+            print school1 + ' teamScore = ' + str(teamScore);
     
     return teamScore;
 
@@ -117,6 +119,8 @@ def calculate_op(school1, school2):
             outcome = 0;
             
         teamOP = teamOP + (outcome * school3OOP);
+        if school1 == 'Georgia Tech':
+            print school2 + ' OP = ' + str(teamOP) + ' ' + str(outcome) + ' ' + str(school3OOP);
         
     return teamOP/numGames;
     
@@ -161,8 +165,10 @@ def calculate_oop(school1, school2, school3):
             outcome = 0;
             school4W = school4W - 1;
             
-        school4WinPerc = school4W / (school4W+school4L);   
+        school4WinPerc = float(school4W) / (school4W+school4L);
         teamOOP = teamOOP + (outcome * school4WinPerc);
+        if school1 == 'Georgia Tech':
+            print school3 + ' teamOOP ' + school4 + ' = ' + str(teamOOP);
         
     return teamOOP/numGames;
 
@@ -312,8 +318,10 @@ def main(argv):
             ws.col(0).width = len(key)*350;
             ws.col(1).width = longestOpp*300;
             
-            score = teamRec*oppRec;
-#             score = calculate_score(key);
+#             score = teamRec*oppRec;
+            score = calculate_score(key);
+#             print key;
+#             print score;
             allRanks[key] = score;
             j+=1;
 
@@ -346,9 +354,9 @@ def main(argv):
             j+=1;
 
     sortedRanks = sorted(allRanks.items(), key=operator.itemgetter(1), reverse=True)
-    highestRank = sortedRanks[0][1]
+#     highestRank = sortedRanks[0][1];
     for rank in sortedRanks:
-        ws1.write(ws1Row, ws1Col, rank[1]/highestRank);
+        ws1.write(ws1Row, ws1Col, rank[1]);
         ws1.write(ws1Row, ws1Col+1, xlwt.Formula('HYPERLINK("#' + "'" + rank[0] + "'" + '!A1";"' + rank[0] + '")'));
         #if ws1Row == 19:
         #    ws1Row = 0;
