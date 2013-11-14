@@ -6,7 +6,7 @@ ESPN. It uses BeautifulSoup 4 and xlwt.
 
 In order to use this, you will need to download bs4, lxml, and xlwt.
 
-Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1, Opponent2, ... , OpponentN}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
+Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1: [Outcome1, OP1], Opponent2: [Outcome2, OP2], ... , OpponentN: [OutcomeN, OPN]}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
 ID dictionary format: {ESPN ID: Team Name}
 Ranks dictionary format: {Team Name: Rank Stat}
 
@@ -26,6 +26,7 @@ from bs4 import BeautifulSoup as bs
 allSchools = {}
 allIDs = {}
 allRanks = {}
+allOPs = {}
 
 def _format_schedule_url(year, idNum):
     """Format ESPN link to scrape individual records from."""
@@ -66,7 +67,7 @@ def scrape_links(school, espn_schedule):
             temp = re.split('[><]', outcomes[j].encode('ascii'));
             if temp[6] == 'W' or temp[6] == 'L':
                 allSchools[school][i].append(temp[6]);
-                allSchools[school][4][oppName] = temp[6]; # Will cause issues when team is played twice
+                allSchools[school][4][oppName] = [temp[6]]; # Will cause issues when team is played twice
                 i+=1;
                 j+=2;
             elif temp[4] == 'Postponed':
@@ -79,18 +80,20 @@ def calculate_score(school1):
     school1Info = allSchools[school1];
     school1Ops = school1Info[4];
     teamScore = 0;
+    allOPs[school1] = {};
     for school2, result in school1Ops.iteritems():
         if school2 not in allSchools or allSchools[school2][1] != 'FBS':
+            allOPs[school1][school2] = 0;
             continue;
         
         school2OP = calculate_op(school1, school2);
+        allOPs[school1][school2] = school2OP;
         
         if result == 'W':
-            outcome = 1;
+            teamScore = teamScore + school2OP;
         else:
-            outcome = 0;
+            teamScore = teamScore - (1 - school2OP);
             
-        teamScore = teamScore + (outcome * school2OP);
         if school1 == 'Georgia Tech':
             print school1 + ' teamScore = ' + str(teamScore);
     
@@ -114,13 +117,12 @@ def calculate_op(school1, school2):
         school3OOP = calculate_oop(school1, school2, school3);
             
         if result == 'W':
-            outcome = 1;
+            teamOP = teamOP + school3OOP;
         else:
-            outcome = 0;
-            
-        teamOP = teamOP + (outcome * school3OOP);
+            teamOP = teamOP - (1 - school3OOP);
+                    
         if school1 == 'Georgia Tech':
-            print school2 + ' OP = ' + str(teamOP) + ' ' + str(outcome) + ' ' + str(school3OOP);
+            print school2 + ' OP = ' + str(teamOP) + ' ' + result + ' ' + str(school3OOP);
         
     return teamOP/numGames;
     
@@ -159,14 +161,14 @@ def calculate_oop(school1, school2, school3):
                 school4L = school4L - 1;
             
         if result == 'W':
-            outcome = 1;
             school4L = school4L - 1;
+            school4WinPerc = float(school4W) / (school4W+school4L);
+            teamOOP = teamOOP + school4WinPerc;
         else:
-            outcome = 0;
             school4W = school4W - 1;
-            
-        school4WinPerc = float(school4W) / (school4W+school4L);
-        teamOOP = teamOOP + (outcome * school4WinPerc);
+            school4WinPerc = float(school4W) / (school4W+school4L);
+            teamOOP = teamOOP - (1 - school4WinPerc);
+               
         if school1 == 'Georgia Tech':
             print school3 + ' teamOOP ' + school4 + ' = ' + str(teamOOP);
         
@@ -198,6 +200,7 @@ def get_schools():
 
 def main(argv):
     global allSchools
+    global allOPs
     year = datetime.date.today().year;
     if len(argv) < 2:
         year = str(2012)
@@ -244,6 +247,9 @@ def main(argv):
             ws.write(2, 0, value[2] + '-' + value[3]);
             teamRec = float(value[2]) / (int(value[2]) + int(value[3])) # Fix?
             ws.write(3, 0, teamRec)
+            
+            score = calculate_score(key);
+            opOPs = allOPs[key];
 
             i = 1;
             oppWins = 0
@@ -302,14 +308,18 @@ def main(argv):
                         oppLoss = oppLoss + teamLoss-(1-offset)
                     elif teamOutc == 'L':
                         oppLoss = oppLoss + 12
-                try: #For non-DII/III Schools
-                    ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
-                except:
-                    ws.write(i, 5, 0)
-                    print teamName;
+                
+                if teamName in opOPs:
+                    ws.write(i, 5, opOPs[teamName]);
+#                 try: #For non-DII/III Schools
+#                     ws.write(i, 5, xlwt.Formula("'" + teamName + "'!A6"));
+#                 except:
+#                     ws.write(i, 5, 0)
+#                     print teamName;
                 if len(teamName) > longestOpp:
                     longestOpp = len(teamName);
                 i+=1;
+                
             oppRec = float(oppWins) / (oppWins + oppLoss)
             ws.write(i+1, 3, oppWins);
             ws.write(i+1, 4, oppLoss);
@@ -319,10 +329,11 @@ def main(argv):
             ws.col(1).width = longestOpp*300;
             
 #             score = teamRec*oppRec;
-            score = calculate_score(key);
+
 #             print key;
 #             print score;
             allRanks[key] = score;
+            ws.write(7, 0, score);                
             j+=1;
 
     j+=1;
