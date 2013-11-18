@@ -6,7 +6,7 @@ ESPN. It uses BeautifulSoup 4 and xlwt.
 
 In order to use this, you will need to download bs4, lxml, and xlwt.
 
-Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1: [Outcome1, OP1], Opponent2: [Outcome2, OP2], ... , OpponentN: [OutcomeN, OPN]}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
+Team dictionary format: {Team Name: [ESPN ID, FBS/FCS, Wins, Losses, {Opponent1: Outcome1, Opponent2: Outcome2, ... , OpponentN: OutcomeN}, [Opponent1, Outcome1], [Opponent2, Outcome2], ... , [OpponentN, OutcomeN]]}
 ID dictionary format: {ESPN ID: Team Name}
 Ranks dictionary format: {Team Name: Rank Stat}
 
@@ -67,7 +67,7 @@ def scrape_links(school, espn_schedule):
             temp = re.split('[><]', outcomes[j].encode('ascii'));
             if temp[6] == 'W' or temp[6] == 'L':
                 allSchools[school][i].append(temp[6]);
-                allSchools[school][4][oppName] = [temp[6]]; # Will cause issues when team is played twice
+                allSchools[school][4][oppName] = temp[6]; # Will cause issues when team is played twice
                 i+=1;
                 j+=2;
             elif temp[4] == 'Postponed':
@@ -117,9 +117,11 @@ def calculate_op(school1, school2):
         school3OOP = calculate_oop(school1, school2, school3);
             
         if result == 'W':
-            teamOP = teamOP + school3OOP;
+            outcome = 1;
         else:
-            teamOP = teamOP - (1 - school3OOP);
+            outcome = 0;
+            
+        teamOP = teamOP + (outcome * school3OOP);
                     
         if school1 == 'Georgia Tech':
             print school2 + ' OP = ' + str(teamOP) + ' ' + result + ' ' + str(school3OOP);
@@ -161,13 +163,14 @@ def calculate_oop(school1, school2, school3):
                 school4L = school4L - 1;
             
         if result == 'W':
-            school4L = school4L - 1;
-            school4WinPerc = float(school4W) / (school4W+school4L);
-            teamOOP = teamOOP + school4WinPerc;
+            outcome = 1;
+            school4L = school4L - 1;           
         else:
+            outcome = 0;
             school4W = school4W - 1;
-            school4WinPerc = float(school4W) / (school4W+school4L);
-            teamOOP = teamOOP - (1 - school4WinPerc);
+        
+        school4WinPerc = float(school4W) / (school4W+school4L);
+        teamOOP = teamOOP + (outcome * school4WinPerc);
                
         if school1 == 'Georgia Tech':
             print school3 + ' teamOOP ' + school4 + ' = ' + str(teamOOP);
